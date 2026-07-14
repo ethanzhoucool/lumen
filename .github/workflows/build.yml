@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build simulator app
+        run: |
+          xcodebuild \
+            -project Lumen.xcodeproj \
+            -scheme Lumen \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_DEBUG_DYLIB=NO \
+            ENABLE_PREVIEWS=NO \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Zip .app bundle
+        run: |
+          set -e
+          APP_PATH=$(find build -name "*.app" -type d | head -1)
+          test -n "$APP_PATH" || (echo "no .app under build/" && exit 1)
+          cd "$(dirname "$APP_PATH")"
+          zip -r "$GITHUB_WORKSPACE/Lumen-Simulator.app.zip" "$(basename "$APP_PATH")"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lumen-Simulator.app.zip
+          path: Lumen-Simulator.app.zip
+          if-no-files-found: error

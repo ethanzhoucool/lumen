@@ -1,0 +1,24 @@
+# Theme animation: the Profile light-switch that re-themes the WHOLE app from
+# dark to light. Verifies the app-wide palette actually changed (a state only
+# reachable by operating the custom switch control).
+test:
+  metadata:
+    name: lumen-light-switch
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - theme
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+    - type: instructions
+      step_description: Open the 'Profile' tab.
+    - type: validation
+      step_description: The Profile screen is shown in a dark theme, with an 'Appearance' section reading 'Dark mode' and a toggle on its right.
+    - type: instructions
+      step_description: Tap the appearance toggle switch on the right of the 'Appearance' row to switch the theme.
+    - type: validation
+      step_description: The entire app has switched to a light theme — a light background with dark text — and the appearance label now reads 'Light mode'.

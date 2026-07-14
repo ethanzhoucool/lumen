@@ -1,0 +1,30 @@
+# Redeem animations: the confirm button that morphs into a determinate progress
+# bar, then the self-drawing checkmark success state. Verifies the success state
+# appears after the progress completes.
+test:
+  metadata:
+    name: lumen-redeem-flow
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - redeem
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+    - type: instructions
+      step_description: Open the 'Offers' tab.
+    - type: instructions
+      step_description: Open the 'Nimbus Cloud' offer by tapping its row (not the Add button) to start a redemption.
+    - type: validation
+      step_description: A redemption sheet for 'Nimbus Cloud' is shown with a cashback amount and a confirm button.
+    - type: instructions
+      step_description: Tap the confirm redemption button and wait for the progress to finish.
+    - type: validation
+      step_description: A success state is shown confirming the cashback was redeemed, with a checkmark and a 'Redeemed' message.
+    - type: instructions
+      step_description: Tap 'Done' to close the redemption sheet.
+    - type: validation
+      step_description: The Offers screen is shown again.

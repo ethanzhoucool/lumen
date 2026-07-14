@@ -1,0 +1,32 @@
+# Offers animations: the like-button pop, the fly-to-cart add animation, and
+# the pill-loader refresh. Verifies post-animation state — filled heart, cart
+# badge count, and the list returning after a refresh.
+test:
+  metadata:
+    name: lumen-offers-interactions
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - offers
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+    - type: instructions
+      step_description: Open the 'Offers' tab.
+    - type: validation
+      step_description: A list of cashback offers is shown, each with a percentage 'back' badge, a heart, and an 'Add' button.
+    - type: instructions
+      step_description: Tap the heart (like) button on the 'Bloom Coffee' offer.
+    - type: validation
+      step_description: The heart on the 'Bloom Coffee' offer is now filled, indicating it is liked.
+    - type: instructions
+      step_description: Tap the 'Add' button on the 'Verde Market' offer to add it to the cart.
+    - type: validation
+      step_description: A cart badge appears in the top-right of the Offers screen showing a count of 1.
+    - type: instructions
+      step_description: Tap the circular refresh button in the top-right of the Offers screen.
+    - type: validation
+      step_description: After refreshing, the list of cashback offers is shown again.

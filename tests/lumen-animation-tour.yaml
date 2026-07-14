@@ -1,0 +1,56 @@
+# Full single-run "animation tour" — one trajectory that touches every major
+# animated/gated interaction in Lumen. Ideal for a demo recording: the agent
+# reasons through login morph, card swap, like + add-to-cart, the scratch-gated
+# reward, and the app-wide theme switch, in plain English.
+test:
+  metadata:
+    name: lumen-animation-tour
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - tour
+      - demo
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+
+    # Wallet: card-swap deck
+    - type: instructions
+      step_description: Swipe the top reward card to the left to flip to the next card.
+    - type: validation
+      step_description: A different reward card is now at the front of the wallet stack.
+
+    # Offers: like + fly-to-cart
+    - type: instructions
+      step_description: Open the 'Offers' tab.
+    - type: instructions
+      step_description: Tap the heart (like) button on the 'Bloom Coffee' offer.
+    - type: validation
+      step_description: The 'Bloom Coffee' heart is filled, indicating it is liked.
+    - type: instructions
+      step_description: Tap the 'Add' button on the 'Verde Market' offer.
+    - type: validation
+      step_description: A cart badge in the top-right shows a count of 1.
+
+    # Rewards: the scratch-to-reveal gated interaction
+    - type: instructions
+      step_description: Open the 'Rewards' tab.
+    - type: instructions
+      step_description: Scratch off the foil on the daily reward card by swiping back and forth across it several times until the prize is revealed.
+    - type: validation
+      step_description: The scratch card is revealed, showing a cashback dollar amount and a 'Claim' button.
+    - type: instructions
+      step_description: Tap the 'Claim' button.
+    - type: validation
+      step_description: The reward is claimed.
+
+    # Profile: app-wide light switch
+    - type: instructions
+      step_description: Open the 'Profile' tab.
+    - type: instructions
+      step_description: Tap the appearance toggle switch in the 'Appearance' section to switch the theme.
+    - type: validation
+      step_description: The entire app has switched to a light theme with a light background and dark text.

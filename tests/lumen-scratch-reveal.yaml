@@ -1,0 +1,29 @@
+# HERO test: the scratch-to-reveal daily reward. This is the gated interaction
+# the agent must physically scratch through before the prize and Claim button
+# exist — exactly the kind of motion-gated UI that breaks selector-based tools.
+test:
+  metadata:
+    name: lumen-scratch-reveal
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - rewards
+      - gated
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+    - type: instructions
+      step_description: Open the 'Rewards' tab.
+    - type: validation
+      step_description: A 'Daily Reward' scratch card is shown with a 'Scratch here' label covering a hidden prize.
+    - type: instructions
+      step_description: Scratch off the foil covering the daily reward card by swiping back and forth across it several times until the prize underneath is revealed.
+    - type: validation
+      step_description: The scratch card has been revealed, showing a cashback dollar amount and a 'Claim' button.
+    - type: instructions
+      step_description: Tap the 'Claim' button to claim the cashback.
+    - type: validation
+      step_description: The reward is claimed — the card now shows a claimed/confirmed state instead of the 'Claim' button.

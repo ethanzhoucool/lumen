@@ -1,0 +1,11 @@
+# Reusable Lumen login setup.
+# Lumen boots to the login screen every launch (no persisted auth), so every
+# feature test imports this. Tapping Sign In also exercises the submit-button
+# morph (pill -> spinner -> checkmark) — the Wallet only appears once it completes.
+blocks:
+  - type: validation
+    step_description: The Lumen login screen is shown with a 'LUMEN' wordmark, an email field, and a 'Sign In' button.
+  - type: instructions
+    step_description: Tap the 'Sign In' button to log in.
+  - type: validation
+    step_description: The Wallet screen is shown with a cashback balance in dollars and a reward card.

@@ -1,0 +1,26 @@
+# Wallet animations: the count-up balance and the swipeable card-swap deck.
+# Verifies the post-animation state — the settled balance amount, and that a
+# swipe cycles the front card of the stack to a different card.
+test:
+  metadata:
+    name: lumen-wallet-cards
+    platform: ios
+    tags:
+      - lumen
+      - animations
+      - wallet
+  build:
+    name: Lumen
+  blocks:
+    - type: module_import
+      module: "lumen-login"
+    - type: validation
+      step_description: The Wallet screen shows a large cashback balance in dollars and a reward card labeled 'Lumen Platinum'.
+    - type: instructions
+      step_description: Swipe the top reward card to the left to move to the next card in the stack.
+    - type: validation
+      step_description: A different reward card is now at the front of the stack (no longer 'Lumen Platinum').
+    - type: instructions
+      step_description: Swipe the top reward card to the left again.
+    - type: validation
+      step_description: The front reward card has changed again, showing the card stack is cycling through cards.
