@@ -221,10 +221,17 @@ struct LumenSpinner: View {
 struct ConfettiView: View {
     var colors: [Color] = [.pink, .purple, .yellow, .green, .blue, .orange]
     private let pieces = 90
+    /// Each piece is drawn for at most 1.6s after a launch stagger of up to 0.18s,
+    /// so nothing is left on the canvas after this long.
+    private let lifetime: TimeInterval = 1.8
     @State private var start: Date?
+    @State private var finished = false
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+        // Pause the timeline once the burst is over. Otherwise it keeps redrawing an
+        // empty canvas at 60 fps for as long as the view stays on screen (e.g. the
+        // whole time the Redeem success state is showing).
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: finished)) { timeline in
             Canvas { context, size in
                 guard let start else { return }
                 let elapsed = timeline.date.timeIntervalSince(start)
@@ -256,7 +263,11 @@ struct ConfettiView: View {
             }
         }
         .allowsHitTesting(false)
-        .onAppear { if start == nil { start = Date() } }
+        .onAppear {
+            guard start == nil else { return }
+            start = Date()
+            DispatchQueue.main.asyncAfter(deadline: .now() + lifetime) { finished = true }
+        }
     }
 
     private func seededRandom(_ seed: Double) -> Double {
