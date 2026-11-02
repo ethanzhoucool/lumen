@@ -436,3 +436,6 @@ private struct RedeemCheckmarkShape: Shape {
         return path
     }
 }
+
+// TEMP failure probe (never merged)
+let lumenFailureProbe: Int = "not an int"
