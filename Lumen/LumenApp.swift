@@ -221,10 +221,17 @@ struct LumenSpinner: View {
 struct ConfettiView: View {
     var colors: [Color] = [.pink, .purple, .yellow, .green, .blue, .orange]
     private let pieces = 90
+    /// Each piece is drawn for at most 1.6s after a launch stagger of up to 0.18s,
+    /// so nothing is left on the canvas after this long.
+    private let lifetime: TimeInterval = 1.8
     @State private var start: Date?
+    @State private var finished = false
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+        // Pause the timeline once the burst is over. Otherwise it keeps redrawing an
+        // empty canvas at 60 fps for as long as the view stays on screen (e.g. the
+        // whole time the Redeem success state is showing).
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: finished)) { timeline in
             Canvas { context, size in
                 guard let start else { return }
                 let elapsed = timeline.date.timeIntervalSince(start)
@@ -256,7 +263,11 @@ struct ConfettiView: View {
             }
         }
         .allowsHitTesting(false)
-        .onAppear { if start == nil { start = Date() } }
+        .onAppear {
+            guard start == nil else { return }
+            start = Date()
+            DispatchQueue.main.asyncAfter(deadline: .now() + lifetime) { finished = true }
+        }
     }
 
     private func seededRandom(_ seed: Double) -> Double {
@@ -283,19 +294,30 @@ struct MainTabView: View {
                 .tabItem { Label("Profile", systemImage: "person.fill") }
         }
         .tint(theme.violet)
-        .onAppear { configureTabBar(theme) }
-        .onChange(of: model.isDark) { _ in configureTabBar(model.theme) }
+        .onAppear { Self.configureTabBar() }
     }
 
     /// Opaque tab bar that matches the current theme surface (instead of the default
     /// translucent material, which floats mismatched over the custom background).
-    private func configureTabBar(_ theme: Theme) {
+    ///
+    /// The colors are dynamic: they resolve against the bar's trait collection, which
+    /// `.preferredColorScheme` flips together with the Profile light-switch. UIAppearance
+    /// only styles a bar when it enters a window, so re-setting the proxy with static
+    /// colors on every toggle never reached the bar that was already on screen.
+    private static func configureTabBar() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(theme.surface)
-        appearance.shadowColor = UIColor(theme.separator)
+        appearance.backgroundColor = themedColor { $0.surface }
+        appearance.shadowColor = themedColor { $0.separator }
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
+    /// A UIColor that picks the light or dark palette's value from the trait collection.
+    private static func themedColor(_ pick: (Theme) -> Color) -> UIColor {
+        let light = UIColor(pick(.light))
+        let dark = UIColor(pick(.dark))
+        return UIColor { traits in traits.userInterfaceStyle == .light ? light : dark }
     }
 }
 
