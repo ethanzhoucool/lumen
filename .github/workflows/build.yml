@@ -7,7 +7,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
@@ -60,16 +64,8 @@ jobs:
           sleep 3
           T0=$(python3 -c 'import time; print(time.time())')
           xcrun simctl launch --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" com.revyl.lumen -LumenHarness
-          shot() {
-            python3 -c "import time; time.sleep(max(0.0, $T0 + $1 - time.time()))"
-            xcrun simctl io "$UDID" screenshot "out/$2.png"
-          }
-          shot 5 a-profile-dark
-          shot 9.5 b-profile-light
-          shot 13.5 c-profile-dark-again
-          shot 15.5 d-offers
-          shot 21.5 e-wallet
-          shot 35 f-end
+          # The harness script ends ~33s after the app's root view appears; allow for a slow launch.
+          python3 -c "import time; time.sleep(max(0.0, $T0 + 45 - time.time()))"
           pkill -INT -f recordVideo || true
           wait $REC || true
           ls -la out
@@ -84,5 +80,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sim-tour
+          name: sim-tour-${{ matrix.os }}
           path: out/
