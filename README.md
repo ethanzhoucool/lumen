@@ -23,14 +23,14 @@ Text swirl, text bounce, animated login fields, submit-button morph, card swap, 
 
 - SwiftUI, iOS 16.0+, no third-party packages.
 - A `TabView` shell behind a login gate. `AppModel` (`ObservableObject`) holds all state and is injected with `@EnvironmentObject`.
-- The animations are pure SwiftUI: `Canvas` for the scratch mask and confetti, `TimelineView` for the marquee, animated overlays for the fly-to-cart, `Shape` + `trim` for the checkmark, infinity loader, and yin-yang, plus `DragGesture`, `@FocusState`, and springs throughout.
+- The animations are pure SwiftUI: `Canvas` for the scratch mask, confetti, and yin-yang, `TimelineView` for the marquee and confetti, animated overlays for the fly-to-cart, `Shape` + `trim` for the checkmark and infinity loader, plus `DragGesture`, `@FocusState`, and springs throughout.
 - One screen per file under `Lumen/`. `LumenApp.swift` holds the app entry, theme, models, mock data, and shared components (`LumenSpinner`, `ConfettiView`); the rest are `Login`, `Wallet`, `Offers`, `Rewards`, `Redeem`, and `Profile`.
 
 ## Build
 
 Open `Lumen.xcodeproj` in Xcode and run the `Lumen` scheme on any iOS Simulator.
 
-The `Build` workflow in `.github/workflows/build.yml` compiles a Debug simulator `.app` and uploads it as the `Lumen-Simulator.app.zip` artifact on every push, pull request, or manual dispatch.
+The `Build` workflow in `.github/workflows/build.yml` compiles a Debug simulator `.app` and uploads it as the `Lumen-Simulator.app.zip` artifact on every push to `main`, every pull request, and manual dispatch.
 
 ## Tests
 
