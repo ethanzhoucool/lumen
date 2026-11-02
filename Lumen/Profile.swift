@@ -421,30 +421,41 @@ struct ProfileInfinityPath: Shape {
     }
 }
 
-/// Draws one or two trim strokes of `ProfileInfinityPath` so the comet
-/// stays a constant length (segmentLength) as it wraps past the 1.0 seam.
+/// A constant-length (segmentLength) slice of `ProfileInfinityPath` starting at
+/// `phase`, split into two pieces when it wraps past the 1.0 seam.
+///
+/// `phase` is the shape's `animatableData`, so SwiftUI re-traces the slice on
+/// every animation frame. Computing the trims in a plain view body instead only
+/// ever sees the end value (phase = 1), which left the comet parked at the start
+/// of the loop rather than travelling around it.
+private struct ProfileInfinityCometShape: Shape {
+    var phase: CGFloat
+    var segmentLength: CGFloat = 0.35
+
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let loop = ProfileInfinityPath().path(in: rect)
+        let tail = phase + segmentLength
+        var comet = loop.trimmedPath(from: phase, to: min(tail, 1.0))
+        if tail > 1.0 {
+            // Comet straddles the seam — add the wrapped-around piece.
+            comet.addPath(loop.trimmedPath(from: 0, to: tail - 1.0))
+        }
+        return comet
+    }
+}
+
 private struct ProfileInfinityComet: View {
     let phase: CGFloat
-    let segmentLength: CGFloat = 0.35
     let gradient: AngularGradient
 
     var body: some View {
-        let tail = phase + segmentLength
-        if tail > 1.0 {
-            // Comet straddles the seam — render two arcs.
-            ZStack {
-                ProfileInfinityPath()
-                    .trim(from: phase, to: 1.0)
-                    .stroke(gradient, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                ProfileInfinityPath()
-                    .trim(from: 0, to: tail - 1.0)
-                    .stroke(gradient, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-            }
-        } else {
-            ProfileInfinityPath()
-                .trim(from: phase, to: tail)
-                .stroke(gradient, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-        }
+        ProfileInfinityCometShape(phase: phase)
+            .stroke(gradient, style: StrokeStyle(lineWidth: 3, lineCap: .round))
     }
 }
 
