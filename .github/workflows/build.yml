@@ -1,15 +1,14 @@
 name: Build
 
+# TEMPORARY verification workflow on a throwaway branch (never merged):
+# builds the app, runs a scripted tour in a simulator, records video/screenshots/logs.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -18,6 +17,7 @@ jobs:
 
       - name: Build simulator app
         run: |
+          set -o pipefail
           xcodebuild \
             -project Lumen.xcodeproj \
             -scheme Lumen \
@@ -28,18 +28,61 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ENABLE_DEBUG_DYLIB=NO \
             ENABLE_PREVIEWS=NO \
-            ONLY_ACTIVE_ARCH=NO
+            ONLY_ACTIVE_ARCH=NO 2>&1 | tee build.log | tail -5
+          echo "---- warnings/errors ----"
+          grep -E ': (warning|error):' build.log | sort -u || true
 
-      - name: Zip .app bundle
+      - name: Run scripted tour in simulator
         run: |
-          set -e
-          APP_PATH=$(find build -name "*.app" -type d | head -1)
-          test -n "$APP_PATH" || (echo "no .app under build/" && exit 1)
-          cd "$(dirname "$APP_PATH")"
-          zip -r "$GITHUB_WORKSPACE/Lumen-Simulator.app.zip" "$(basename "$APP_PATH")"
+          set -x
+          mkdir -p out
+          cp build.log out/
+          APP_PATH=$(find build -name "Lumen.app" -type d | head -1)
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          c = [(k, x) for k, v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone") and x["name"].endswith("Pro")]
+          c = c or [(k, x) for k, v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")]
+          c.sort(key=lambda kx: kx[0])
+          print(c[-1][1]["udid"])
+          ')
+          xcrun simctl list devices available | grep "$UDID" | tee out/device.txt
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP_PATH"
+          # Warm-up launch so first-launch overhead doesn't eat into the timeline.
+          xcrun simctl launch "$UDID" com.revyl.lumen
+          sleep 8
+          xcrun simctl terminate "$UDID" com.revyl.lumen || true
+          sleep 2
+          ( xcrun simctl io "$UDID" recordVideo --codec=h264 --force out/run.mp4 2>&1 | while IFS= read -r l; do echo "$(python3 -c 'import time; print(time.time())') $l"; done > out/rec.txt ) &
+          REC=$!
+          sleep 3
+          T0=$(python3 -c 'import time; print(time.time())')
+          xcrun simctl launch --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" com.revyl.lumen -LumenHarness
+          shot() {
+            python3 -c "import time; time.sleep(max(0.0, $T0 + $1 - time.time()))"
+            xcrun simctl io "$UDID" screenshot "out/$2.png"
+          }
+          shot 5 a-profile-dark
+          shot 9.5 b-profile-light
+          shot 13.5 c-profile-dark-again
+          shot 15.5 d-offers
+          shot 21.5 e-wallet
+          shot 35 f-end
+          pkill -INT -f recordVideo || true
+          wait $REC || true
+          ls -la out
+          cat out/rec.txt out/stdout.txt
+
+      - name: Emit contact sheets into the log
+        run: |
+          python3 -m venv /tmp/ffv && /tmp/ffv/bin/pip -q install imageio-ffmpeg
+          FF=$(/tmp/ffv/bin/python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
+          python3 .github/sim/process.py "$FF" out
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: Lumen-Simulator.app.zip
-          path: Lumen-Simulator.app.zip
-          if-no-files-found: error
+          name: sim-tour
+          path: out/
