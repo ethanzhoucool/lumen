@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 
 // MARK: - Logging
 
@@ -226,6 +227,7 @@ struct ConfettiView: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
             Canvas { context, size in
+                Harness.confettiDraws += 1
                 guard let start else { return }
                 let elapsed = timeline.date.timeIntervalSince(start)
                 for i in 0..<pieces {
@@ -269,18 +271,19 @@ struct ConfettiView: View {
 
 struct MainTabView: View {
     @EnvironmentObject var model: AppModel
+    @ObservedObject private var harness = Harness.shared
 
     var body: some View {
         let theme = model.theme
-        TabView {
+        TabView(selection: $harness.tab) {
             WalletView()
-                .tabItem { Label("Wallet", systemImage: "creditcard.fill") }
+                .tabItem { Label("Wallet", systemImage: "creditcard.fill") }.tag(0)
             OffersView()
-                .tabItem { Label("Offers", systemImage: "tag.fill") }
+                .tabItem { Label("Offers", systemImage: "tag.fill") }.tag(1)
             RewardsView()
-                .tabItem { Label("Rewards", systemImage: "gift.fill") }
+                .tabItem { Label("Rewards", systemImage: "gift.fill") }.tag(2)
             ProfileView()
-                .tabItem { Label("Profile", systemImage: "person.fill") }
+                .tabItem { Label("Profile", systemImage: "person.fill") }.tag(3)
         }
         .tint(theme.violet)
         .onAppear { configureTabBar(theme) }
@@ -303,6 +306,7 @@ struct MainTabView: View {
 
 struct RootView: View {
     @EnvironmentObject var model: AppModel
+    @ObservedObject private var harness = Harness.shared
 
     var body: some View {
         ZStack {
@@ -318,7 +322,8 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(model.isDark ? .dark : .light)
-        .onAppear { llog("launch") }
+        .overlay { if harness.showConfetti { ConfettiView().ignoresSafeArea() } }
+        .onAppear { llog("launch"); Harness.shared.start(model) }
     }
 }
 
@@ -330,5 +335,59 @@ struct LumenApp: App {
         WindowGroup {
             RootView().environmentObject(model)
         }
+    }
+}
+
+
+// MARK: - TEMPORARY verification harness (never merged)
+
+final class Harness: ObservableObject {
+    static let shared = Harness()
+    static var chipAppears = 0
+    static var confettiDraws = 0
+    @Published var tab = 3
+    @Published var showConfetti = false
+    let addRequests = PassthroughSubject<Int, Never>()
+    let enabled = ProcessInfo.processInfo.arguments.contains("-LumenHarness")
+    private var started = false
+    private var t0 = Date()
+
+    func log(_ s: String) {
+        print(String(format: "[Harness] epoch=%.3f t=%.2f %@", Date().timeIntervalSince1970, Date().timeIntervalSince(t0), s))
+        fflush(stdout)
+    }
+
+    private func at(_ t: Double, _ label: String, _ work: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + t) {
+            self.log(label)
+            work()
+        }
+    }
+
+    func start(_ model: AppModel) {
+        guard enabled, !started else { return }
+        started = true
+        t0 = Date()
+        model.isAuthenticated = true
+        log("start (profile tab)")
+        at(6, "toggle theme (-> light)") { model.toggleTheme() }
+        at(10, "toggle theme (-> dark)") { model.toggleTheme() }
+        at(14, "tab offers") { self.tab = 1 }
+        at(16, "add offer 0") { self.addRequests.send(0) }
+        at(18, "add offer 3") { self.addRequests.send(3) }
+        at(20, "tab wallet") { self.tab = 0 }
+        var c0 = 0
+        at(22, "chip window start") { c0 = Harness.chipAppears }
+        at(25, "chip window end") {
+            self.log("chip onAppear count over 3s window: \(Harness.chipAppears - c0) (total \(Harness.chipAppears))")
+        }
+        var d0 = 0
+        at(26, "confetti on") { d0 = Harness.confettiDraws; self.showConfetti = true }
+        for s in 1...6 {
+            at(26 + Double(s), "confetti tick") {
+                self.log("confetti canvas draws after \(s)s: \(Harness.confettiDraws - d0)")
+            }
+        }
+        at(33, "done") {}
     }
 }

@@ -80,6 +80,13 @@ struct OffersView: View {
         .onPreferenceChange(OffersAddButtonFrameKey.self) { frames in
             addButtonFrames = frames
         }
+        .onReceive(Harness.shared.addRequests) { index in
+            let offer = model.offers[index]
+            model.addToCart(offer)
+            let frame = addButtonFrames[offer.id] ?? .zero
+            Harness.shared.log("add frame \(frame) -> badge \(cartBadgeFrame)")
+            spawnFlyParticle(offer: offer, from: frame)
+        }
         .sheet(item: $selectedOffer) { offer in
             RedeemView(offer: offer)
                 .environmentObject(model)

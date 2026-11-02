@@ -526,5 +526,6 @@ private struct WalletMarqueeChip: View {
                 .fill(theme.surface)
                 .overlay(Capsule().stroke(accent.opacity(0.3), lineWidth: 1))
         )
+        .onAppear { Harness.chipAppears += 1 }
     }
 }
