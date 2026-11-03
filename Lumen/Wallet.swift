@@ -439,10 +439,11 @@ struct WalletMarquee: View {
     @EnvironmentObject var model: AppModel
     @State private var rowWidth: CGFloat = 0
 
-    // Build chip data from offers
+    // Build chip data from offers. Chip ids come from the offers, so they stay the
+    // same from one TimelineView tick to the next.
     private var chips: [WalletChipData] {
         model.offers.map {
-            WalletChipData(label: "\($0.merchant)  \($0.cashbackPct)% back", accent: $0.accentColor)
+            WalletChipData(id: $0.id, label: "\($0.merchant)  \($0.cashbackPct)% back", accent: $0.accentColor)
         }
     }
 
@@ -450,6 +451,7 @@ struct WalletMarquee: View {
     private let speed: CGFloat = 42
 
     var body: some View {
+        let chips = self.chips
         let modulusWidth = rowWidth > 0 ? rowWidth : CGFloat(chips.count) * 174
 
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
@@ -481,8 +483,10 @@ struct WalletMarquee: View {
 
 // MARK: - WalletMarqueeRow
 
+/// `id` must be stable: the marquee rebuilds its rows on every animation frame, and a
+/// fresh UUID per rebuild made ForEach tear down and recreate every chip view each frame.
 private struct WalletChipData: Identifiable {
-    let id = UUID()
+    let id: UUID
     let label: String
     let accent: Color
 }
