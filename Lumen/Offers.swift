@@ -570,24 +570,6 @@ struct OffersCartFlyParticle: View {
     @State private var hasLanded = false
 
     var body: some View {
-        let start = CGPoint(
-            x: token.startFrame.midX,
-            y: token.startFrame.midY
-        )
-        let end = CGPoint(
-            x: targetFrame.midX,
-            y: targetFrame.midY
-        )
-
-        // Interpolated position
-        let x = start.x + (end.x - start.x) * phase
-        let rawY = start.y + (end.y - start.y) * phase
-        // Arc upward in the middle
-        let arcLift: CGFloat = -80 * sin(phase * .pi)
-        let y = rawY + arcLift
-
-        let iconScale = 1.0 - phase * 0.65
-
         ZStack {
             Circle()
                 .fill(token.accentColor.opacity(0.2 * Double(1 - phase)))
@@ -596,9 +578,11 @@ struct OffersCartFlyParticle: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(token.accentColor)
         }
-        .scaleEffect(iconScale)
-        .opacity(Double(1.0 - max(0, phase - 0.75) / 0.25))
-        .position(x: x, y: y)
+        .modifier(OffersFlightPath(
+            phase: phase,
+            start: CGPoint(x: token.startFrame.midX, y: token.startFrame.midY),
+            end: CGPoint(x: targetFrame.midX, y: targetFrame.midY)
+        ))
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
                 phase = 1.0
@@ -609,5 +593,37 @@ struct OffersCartFlyParticle: View {
                 onLand()
             }
         }
+    }
+}
+
+// MARK: - OffersFlightPath (per-frame arc for the fly-to-cart particle)
+
+/// Places the particle along its arc for a given flight `phase` (0 → 1).
+///
+/// `phase` is the modifier's `animatableData`, so SwiftUI calls `body` with every
+/// interpolated value. Computing the position in the particle's own body instead
+/// only ever saw the end value (phase = 1): the particle slid in a straight line
+/// and faded out over the whole flight rather than arcing up and fading at the end.
+private struct OffersFlightPath: ViewModifier, Animatable {
+    var phase: CGFloat
+    let start: CGPoint
+    let end: CGPoint
+
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let x = start.x + (end.x - start.x) * phase
+        let rawY = start.y + (end.y - start.y) * phase
+        // Arc upward in the middle
+        let arcLift: CGFloat = -80 * sin(phase * .pi)
+        let y = rawY + arcLift
+
+        content
+            .scaleEffect(1.0 - phase * 0.65)
+            .opacity(Double(1.0 - max(0, phase - 0.75) / 0.25))
+            .position(x: x, y: y)
     }
 }
