@@ -283,19 +283,30 @@ struct MainTabView: View {
                 .tabItem { Label("Profile", systemImage: "person.fill") }
         }
         .tint(theme.violet)
-        .onAppear { configureTabBar(theme) }
-        .onChange(of: model.isDark) { _ in configureTabBar(model.theme) }
+        .onAppear { Self.configureTabBar() }
     }
 
     /// Opaque tab bar that matches the current theme surface (instead of the default
     /// translucent material, which floats mismatched over the custom background).
-    private func configureTabBar(_ theme: Theme) {
+    ///
+    /// The colors are dynamic: they resolve against the bar's trait collection, which
+    /// `.preferredColorScheme` flips together with the Profile light-switch. UIAppearance
+    /// only styles a bar when it enters a window, so re-setting the proxy with static
+    /// colors on every toggle never reached the bar that was already on screen.
+    private static func configureTabBar() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(theme.surface)
-        appearance.shadowColor = UIColor(theme.separator)
+        appearance.backgroundColor = themedColor { $0.surface }
+        appearance.shadowColor = themedColor { $0.separator }
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
+    /// A UIColor that picks the light or dark palette's value from the trait collection.
+    private static func themedColor(_ pick: (Theme) -> Color) -> UIColor {
+        let light = UIColor(pick(.light))
+        let dark = UIColor(pick(.dark))
+        return UIColor { traits in traits.userInterfaceStyle == .light ? light : dark }
     }
 }
 
